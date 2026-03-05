@@ -64,7 +64,6 @@ def plot_stability_multi(
     figsize = (3.25, 2.6) if column == "single" else (6.75, 2.8)
     fig, ax = plt.subplots(figsize=figsize)
 
-    # ---- explicit plotting order (bottom → top) ----
     def kernel_priority_laplace(k):
         # bottom → top: LABFM, GNN, WC2, Q_S
         if isinstance(k, int):  # LABFM orders
@@ -81,7 +80,7 @@ def plot_stability_multi(
         # bottom → top: WC2, LABFM, Q_S, GNN
         if k == "wc2":
             return (0, 0)
-        if isinstance(k, int):  # LABFM orders
+        if isinstance(k, int):
             return (1, k)
         if k == "q_s":
             return (2, 0)
@@ -93,10 +92,10 @@ def plot_stability_multi(
 
     items = sorted(
         results.items(),
-        key=lambda kv: (priority(kv[0][1]), kv[0][0])  # (kernel-priority, resolution)
+        key=lambda kv: (priority(kv[0][1]), kv[0][0])
     )
 
-    # Get default matplotlib color cycle
+
     colors = {
         2: "tab:blue",
         4: "tab:red",
@@ -147,7 +146,6 @@ def plot_stability_multi(
                 A[i, i] = 0
                 A[i, i] = - np.sum(A[i, :])
         else:
-            # if diff_operator == 'laplace': h = h ** 2
             for i in range(len(coor)):
                 loc = coor[i]
                 if tuple(loc) not in weights.keys(): continue
@@ -179,17 +177,14 @@ def plot_stability_multi(
             color=colors[kernel]
         )
 
-    # ---- axes styling ----
     ax.tick_params(labelsize=8)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 
-    # grid below everything
     ax.grid(True, which="major", linewidth=0.4, alpha=0.8)
     ax.grid(True, which="minor", linestyle=":", linewidth=0.25, alpha=0.25)
     ax.minorticks_on()
 
-    # ---- black zero axes on top ----
     if show_axes0:
         ax.axhline(0.0, color="black", linewidth=0.9, zorder=1)
         ax.axvline(0.0, color="black", linewidth=0.9, zorder=1)
@@ -215,19 +210,19 @@ def plot_resolving_p(
     filename_prefix="resolving_power",
     column="single",
     show_legend=True,
-    use_inset=True,                 # Laplacian inset
-    zoom_y=False,                   # Laplacian log-zoom feature
+    use_inset=True,
+    zoom_y=False,
     zoom_pad=1.05,
     inset_loc="upper right",
     inset_size=("35%", "25%"),
     inset_xlim=(0.1, 0.3),
     inset_ylim=(0.0, 0.1),
 
-    use_inset_x=False,              # NEW: Gradient inset
-    inset_loc_x="upper right",       # NEW
-    inset_size_x=("25%", "25%"),    # NEW
-    inset_xlim_x=(0.05, 0.25),        # NEW
-    inset_ylim_x=(0.05, 0.25),        # NEW
+    use_inset_x=False,
+    inset_loc_x="upper right",
+    inset_size_x=("25%", "25%"),
+    inset_xlim_x=(0.05, 0.25),
+    inset_ylim_x=(0.05, 0.25),
 ):
     from functions.res_power import resolving_power_real
 
@@ -260,7 +255,7 @@ def plot_resolving_p(
     fig_lap, ax_lap = plt.subplots(figsize=figsize)
 
     k_hat_ref = None
-    x_curves = {}     # NEW: store gradient curves for inset
+    x_curves = {}
     lap_curves = {}
 
     for (resolution, kernel) in results.keys():
@@ -280,21 +275,18 @@ def plot_resolving_p(
             n_samples=int(1e10),
         )
 
-        # ---- X derivative modal response
         k_hat_x = res_power_x[:, 1]
         re_keff_x = res_power_x[:, 0]
         idx = np.argsort(k_hat_x)
         k_hat_x = k_hat_x[idx]
         re_keff_x = re_keff_x[idx]
 
-        # ---- Laplacian modal response
         k_hat_l = res_power_lap[:, 1]
         re_lap_eff = res_power_lap[:, 0]
         idx2 = np.argsort(k_hat_l)
         k_hat_l = k_hat_l[idx2]
         re_lap_eff = re_lap_eff[idx2]
 
-        # Reference curves (plotted once)
         if k_hat_ref is None:
             k_hat_ref = k_hat_x
 
@@ -310,17 +302,16 @@ def plot_resolving_p(
                 label="Spectral",
             )
 
-        # Plot lines only
         ax_x.plot(
             k_hat_x, re_keff_x,
             linewidth=1.6,
             color=colors.get(kernel, "k"),
             label=labels.get(kernel, str(kernel)),
         )
-        x_curves[kernel] = (k_hat_x, re_keff_x)   # NEW
+        x_curves[kernel] = (k_hat_x, re_keff_x)
 
-        x_l = k_hat_l# ** 2
-        y_l = re_lap_eff #** 2
+        x_l = k_hat_l
+        y_l = re_lap_eff
 
         ax_lap.plot(
             x_l, y_l,
@@ -330,7 +321,6 @@ def plot_resolving_p(
         )
         lap_curves[kernel] = (x_l, y_l)
 
-    # --- Formatting: X
     ax_x.set_xlabel(r"$\omega / \omega_{\mathrm{Ny}}$", fontsize=9)
     ax_x.set_ylabel(r"$\omega_{\mathrm{eff}} / \omega_{\mathrm{Ny}}$", fontsize=9)
     ax_x.tick_params(labelsize=8)
@@ -338,7 +328,6 @@ def plot_resolving_p(
     ax_x.spines["right"].set_visible(False)
     ax_x.grid(True, linewidth=0.35)
 
-    # --- Formatting: Laplacian
     ax_lap.set_xlabel(r"$\omega / \omega_{\mathrm{Ny}}$", fontsize=9)
     ax_lap.set_ylabel(r"$(\omega_{\mathrm{eff}} / \omega_{\mathrm{Ny}})^2$", fontsize=9)
     ax_lap.tick_params(labelsize=8)
@@ -346,7 +335,6 @@ def plot_resolving_p(
     ax_lap.spines["right"].set_visible(False)
     ax_lap.grid(True, linewidth=0.35)
 
-    # --- Laplacian zoom feature (unchanged)
     if zoom_y and len(lap_curves) > 0:
         x_threshold = 0.8
 
@@ -369,7 +357,6 @@ def plot_resolving_p(
         #ax_lap.set_yscale("log")
         #ax_lap.set_ylim(ymin, zoom_pad * ymax)
 
-    # --- Laplacian inset (unchanged)
     if use_inset and len(lap_curves) > 0 and (k_hat_ref is not None):
         axins = inset_axes(
             ax_lap,
@@ -392,7 +379,6 @@ def plot_resolving_p(
 
         mark_inset(ax_lap, axins, loc1=2, loc2=4, fc="none", ec="0.4", linewidth=0.6)
 
-    # --- NEW: Gradient inset
     if use_inset_x and len(x_curves) > 0 and (k_hat_ref is not None):
         axins_x = inset_axes(
             ax_x,
@@ -439,22 +425,20 @@ def plot_convergence(
     size=14,
     save=False,
     filename="convergence.pdf",
-    column="single",            # "single" or "double"
-    rasterize_points=False,     # True if many points
-    show_legend=True,           # <--- ADD THIS
+    column="single",
+    rasterize_points=False,
+    show_legend=True,
 ):
 
-    # --- Collect data
     allowed = [2, 4, 6, 8, "q_s", "wc2", "models"]
     poly_data = {}
 
     for k, v in results.items():
-        # k assumed to be (h_or_inv?, degree) as in your code
         poly_degree = k[1]
         if poly_degree not in allowed:
             continue
 
-        s_value = 1.0 / float(k[0])  # keep your convention
+        s_value = 1.0 / float(k[0])
         l2_value = getattr(v, f"{derivative}_l2")
 
         if poly_degree not in poly_data:
@@ -462,7 +446,6 @@ def plot_convergence(
         poly_data[poly_degree]["s"].append(s_value)
         poly_data[poly_degree]["l2"].append(float(np.asarray(l2_value).reshape(-1)[0]))
 
-    # --- Styling maps (no hard requirement to use these exact colors; keep if you want)
     colors = {
         2: "tab:blue",
         4: "tab:red",
@@ -490,8 +473,6 @@ def plot_convergence(
 
     fig, ax = plt.subplots(figsize=figsize)
 
-    # --- Plot each method/degree (sorted)
-    # Prefer a deterministic order in legend
     order = [2, 4, 6, 8, "q_s", "wc2", "models"]
     for key in order:
         if key not in poly_data:
@@ -500,7 +481,6 @@ def plot_convergence(
         s = np.asarray(poly_data[key]["s"], dtype=float)
         l2 = np.asarray(poly_data[key]["l2"], dtype=float)
 
-        # sort so lines connect correctly
         idx = np.argsort(s)
         s, l2 = s[idx], l2[idx]
 
@@ -514,7 +494,6 @@ def plot_convergence(
             rasterized=rasterize_points,
         )
 
-        # Optional: emphasize scatter separately (often unnecessary since markers exist)
         ax.scatter(
             s, l2,
             color=colors.get(key, "k"),
@@ -523,18 +502,16 @@ def plot_convergence(
             rasterized=rasterize_points,
         )
 
-    # --- Axes / scales
     ax.set_xscale("log")
     ax.set_yscale("log")
     ax.set_xlabel(r"$s/H$", fontsize=9)
-    ax.set_ylabel(r"$L_2$ norm", fontsize=9)  # clearer than "L2 norm" in a paper
+    ax.set_ylabel(r"$L_2$ norm", fontsize=9)
     ax.tick_params(labelsize=8)
 
     # Clean spines
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 
-    # --- Log ticks: major + minor, mathtext formatting
     ax.xaxis.set_major_locator(LogLocator(base=10.0))
     ax.yaxis.set_major_locator(LogLocator(base=10.0))
     ax.xaxis.set_minor_locator(LogLocator(base=10.0, subs=np.arange(2, 10) * 0.1))
@@ -546,11 +523,9 @@ def plot_convergence(
     ax.xaxis.set_minor_formatter(NullFormatter())
     ax.yaxis.set_minor_formatter(NullFormatter())
 
-    # --- Grid: light and unobtrusive
     ax.grid(True, which="major", linewidth=0.4)
     ax.grid(True, which="minor", linestyle=":", linewidth=0.3, alpha=0.8)
 
-    # --- Legend (optional)
     if show_legend:
         ax.legend(
             fontsize=7.5,
