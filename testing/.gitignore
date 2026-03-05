@@ -1,0 +1,8 @@
+.venv/
+.idea/
+__pycache__/
+gnn_graphs/
+results_*
+.DS_Store
+plots
+*.pdf
