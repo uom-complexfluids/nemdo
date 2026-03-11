@@ -4,6 +4,7 @@ from functions.wendland_c2_operator import wendlandc2_weights
 from functions.labfm_operator import calc_weights
 from functions.gnn_operator import gnn_weights
 from functions.p_test_function import test_function, dif_analytical, laplace_phi, dif_do, calc_l2
+from functions.moments import calc_moments
 
 
 class AbstractBaseClass:
@@ -34,6 +35,8 @@ class AbstractBaseClass:
         self.dx_l2       = calc_l2(self.dtdx_approx, self.dtdx_true)
         self.laplace_l2  = calc_l2(self.laplace_approx, self.laplace_true)
 
+    def check_moments(self):
+        self.m_x, self.m_l = calc_moments(self._neigh_xy, self.x, self.laplace, self.h)
 
 
 class LABFM(AbstractBaseClass):
@@ -49,6 +52,7 @@ class LABFM(AbstractBaseClass):
         self.polynomial_test_function_method()
         self.approx_diff_op()
         self.calc_l2()
+        self.check_moments()
 
 
 class GNN(AbstractBaseClass):
@@ -63,6 +67,7 @@ class GNN(AbstractBaseClass):
         self.polynomial_test_function_method()
         self.approx_diff_op()
         self.calc_l2()
+        self.check_moments()
 
 
 class WLandC2(AbstractBaseClass):
@@ -77,6 +82,7 @@ class WLandC2(AbstractBaseClass):
         self.polynomial_test_function_method()
         self.approx_diff_op()
         self.calc_l2()
+        self.check_moments()
 
 
 class QSPline(AbstractBaseClass):
@@ -91,6 +97,7 @@ class QSPline(AbstractBaseClass):
         self.polynomial_test_function_method()
         self.approx_diff_op()
         self.calc_l2()
+        self.check_moments()
 
 
 
