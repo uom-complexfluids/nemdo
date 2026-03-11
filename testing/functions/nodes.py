@@ -5,9 +5,10 @@ from scipy.spatial import cKDTree
 import random
 
 
-def random_matrix(seed: float, shape: tuple, s: float) -> NDArray:
+def random_matrix(seed: float, shape: tuple, s: float, noise: float) -> NDArray:
     random.seed(seed)
-    return np.array([[random.uniform(-s*0.25, s*0.25) for _ in range(shape[1])] for _ in range(shape[0])])
+    noise = noise / 2
+    return np.array([[random.uniform(-s*noise, s*noise) for _ in range(shape[1])] for _ in range(shape[0])])
 
 
 
@@ -23,7 +24,7 @@ def calc_h(s: float, kernel: int | str) -> float:
     elif isinstance(kernel, str):
         if kernel == 'wc2': h = 1.5 * s
         elif kernel == 'q_s': h = 1.5 * s
-        elif kernel == 'models': h = 2.3 * s
+        elif kernel == 'models': h = 2 * s
         return h
 
 
@@ -48,9 +49,10 @@ def create_nodes(total_nodes: int, s: float, h: float) -> Tuple[NDArray, int]:
 
     X, Y = np.meshgrid(x, y)  # Create a 2D grid of x and y coordinates
 
+    noise = 1
     # Perturb the coordinates
-    shift_x = random_matrix(1, X.shape, s)
-    shift_y = random_matrix(2, Y.shape, s)
+    shift_x = random_matrix(1, X.shape, s, 1)
+    shift_y = random_matrix(2, Y.shape, s , 1)
     X = X + shift_x
     Y = Y + shift_y
 
