@@ -2,6 +2,7 @@ from models.preproc import load_gnn
 import torch
 from models.preproc import calc_moments_torch
 from scipy.spatial import cKDTree
+from torch import Tensor
 from tqdm import tqdm
 from functions.nodes import neighbour_nodes_kdtree
 import numpy as np
@@ -73,6 +74,7 @@ def gnn_weights(coordinates, h, total_nodes, nodes_in_domain):
 
         # stencil length
         h_total[b] = neigh_r_d[-1]
+        h_dict[ref_node] = neigh_r_d[-1]
 
         # node features
         x[b * num_neighbours: (b + 1) * num_neighbours, :] = torch.from_numpy(neigh_xy_d / neigh_r_d[-1])
@@ -83,7 +85,7 @@ def gnn_weights(coordinates, h, total_nodes, nodes_in_domain):
             edge_index = torch.zeros((2, num_edges * batch_size), dtype=torch.long)
             batch = torch.zeros(num_neighbours * batch_size, dtype=torch.long)
             x = torch.zeros((num_neighbours * batch_size, 2), dtype=torch.float32)
-            h_total = torch.zeros(batch_size, dtype=torch.float32)
+            h_total = np.zeros(batch_size, dtype=np.float32)
 
 
     if b > -1:
@@ -101,7 +103,7 @@ def gnn_weights(coordinates, h, total_nodes, nodes_in_domain):
     model_laplace.eval()
 
     with torch.no_grad():
-        for b in tqdm(data_loader, desc="Predicting GNN Weights for " + str(total_nodes), ncols=100):
+        for b in tqdm(data_loader, desc="Predicting NeMDO Weights for " + str(total_nodes), ncols=100):
 
             x          = b[0]
             edge_index = b[1]
