@@ -49,10 +49,10 @@ def create_nodes(total_nodes: int, s: float, h: float) -> Tuple[NDArray, int]:
 
     X, Y = np.meshgrid(x, y)  # Create a 2D grid of x and y coordinates
 
-    noise = 1
+    noise = 0.5
     # Perturb the coordinates
-    shift_x = random_matrix(1, X.shape, s, 1)
-    shift_y = random_matrix(2, Y.shape, s , 1)
+    shift_x = random_matrix(1, X.shape, s, noise)
+    shift_y = random_matrix(2, Y.shape, s, noise)
     X = X + shift_x
     Y = Y + shift_y
 
