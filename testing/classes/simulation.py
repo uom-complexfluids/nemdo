@@ -2,7 +2,7 @@ from functions.nodes import create_nodes, calc_h
 from functions.qspline_operator import qspline_weights
 from functions.wendland_c2_operator import wendlandc2_weights
 from functions.labfm_operator import calc_weights
-from functions.gnn_operator import gnn_weights
+from functions.nemdo_operator import gnn_weights
 from functions.p_test_function import test_function, dif_analytical, laplace_phi, dif_do, calc_l2
 from functions.moments import calc_moments
 
