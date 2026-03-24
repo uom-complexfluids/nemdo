@@ -18,7 +18,7 @@ def gnn_weights(coordinates, h, total_nodes, nodes_in_domain):
     tree = cKDTree(coordinates)
     # Below we detail the number of neighbours for each model
     # nemdo_x and nemdo_lap: 35
-    # Below are the two mo
+    # Below are the two models used in the computational accuracy trade-off experiment
     # nemdo_1: 10 (computes x-derivative weights)
     # nemdo_2: 15 (computes x-derivative weights)
     model_x, _ = load_gnn(model_class='x_and_lap',
