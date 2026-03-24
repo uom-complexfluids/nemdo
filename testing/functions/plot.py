@@ -3,6 +3,10 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 from matplotlib.ticker import LogLocator, LogFormatterMathtext, NullFormatter, ScalarFormatter
 from tqdm import tqdm
+from matplotlib.markers import MarkerStyle
+
+import logging
+logging.getLogger('fontTools').setLevel(logging.WARNING)
 
 
 def plot_kernel(features, labels=None, alpha=0.6, size = 2):
@@ -212,12 +216,10 @@ def plot_resolving_p(
     column="single",
     show_legend=False,
     use_inset_lap=True,
-    zoom_y=False,
-    zoom_pad=1.05,
     inset_loc="upper left",
     inset_size=("50%", "45%"),
-    inset_xlim_lap=(0, 0.0035),
-    inset_ylim_lap=(1e-8, 1e-4),
+    inset_xlim_lap=(0, 0.0045),
+    inset_ylim_lap=(1e-9, 1e-4),
 
     use_inset_x=False,
     inset_loc_x="upper left",
@@ -225,7 +227,8 @@ def plot_resolving_p(
     inset_xlim_x=(0.01, 0.1),
     inset_ylim_x=(1e-6,1e-2),
 ):
-    from functions.res_power import resolving_power_real
+    from functions.res_power import resolving_power
+    from collections import defaultdict
 
     if use_inset_lap or use_inset_x:
         from mpl_toolkits.axes_grid1.inset_locator import inset_axes, mark_inset
@@ -250,6 +253,11 @@ def plot_resolving_p(
         "models": "tab:orange",
     }
 
+    linestyle = {
+        0: '-',
+        1: ':'
+    }
+
     figsize = (4.2, 2.6) if column == "single" else (6.75, 2.8)
 
     fig_x_re, ax_x_re = plt.subplots(figsize=figsize)
@@ -260,271 +268,268 @@ def plot_resolving_p(
 
 
     k_hat_ref = None
-    x_curves = {}
-    x_curves_im = {}
-    lap_curves = {}
-    lap_curves_im = {}
 
+    x_curves = defaultdict(list)
+    x_curves_im = defaultdict(list)
+    lap_curves = defaultdict(list)
+    lap_curves_im = defaultdict(list)
 
     for (resolution, kernel) in results.keys():
         attrs = results[(resolution, kernel)]
         sph_bool = False
 
-        res_power_x, res_power_lap = resolving_power_real(
+        all_res_power_x, all_res_power_lap = resolving_power_real(
             w_x=attrs.x,
             w_l=attrs.laplace if not sph_bool else None,
-            w_y=attrs.y if sph_bool else None,
             s=attrs.s,
-            sph_bool=sph_bool,
-            neigh_dist_xy=attrs._neigh_xy,
-            neigh_r=attrs._neigh_r if sph_bool else None,
-            rho=attrs.rho if sph_bool else None,
-            neigh_coor=attrs._neigh_coor if sph_bool else None,
-            n_samples=int(1e10),
+            neigh_dist_xy=attrs._neigh_xy
         )
 
-        k_hat_x   = res_power_x[:, -1]
-        re_keff_x = res_power_x[:, 0]
-        im_keff_x = res_power_x[:, 1]
+        for i in range(len(all_res_power_x)):
+            res_power_x = all_res_power_x[i]
+            res_power_lap = all_res_power_lap[i]
 
-        k_hat_l = res_power_lap[:, -1]
-        re_lap_eff = res_power_lap[:, 0] #** 2
-        im_lap_eff = res_power_lap[:, 1] #** 2
-        lap_x = np.sqrt(k_hat_l)
+            k_hat_x   = res_power_x[:, -1]
+            re_keff_x = res_power_x[:, 0]
+            im_keff_x = res_power_x[:, 1]
 
-        # ensures the spectral line is not drawn multiple times if multiple kernels are being plotted
-        if k_hat_ref is None:
-            # drawing the spectral lines on the plot
-            k_hat_ref = True
+            k_hat_l = res_power_lap[:, -1]
+            re_lap_eff = res_power_lap[:, 0]
+            im_lap_eff = res_power_lap[:, 1]
+            lap_x = np.sqrt(k_hat_l)
 
+            # ensures the spectral line is not drawn multiple times if multiple kernels are being plotted
+            if k_hat_ref is None:
+                # drawing the spectral lines on the plot
+                k_hat_ref = True
+
+                ax_x_re.plot(
+                    k_hat_x, k_hat_x,
+                    linestyle="--", linewidth=1.2, color="black",
+                    label="Spectral",
+                )
+
+                ax_lap_re.plot(
+                    k_hat_l, k_hat_l ** 2,
+                    linestyle="--", linewidth=1.2, color="black",
+                    label="Spectral",
+                )
+
+            # plots the resolving power for the mesh-free operators for the derivative
             ax_x_re.plot(
-                k_hat_x, k_hat_x,
-                linestyle="--", linewidth=1.2, color="black",
-                label="Spectral",
+                k_hat_x, re_keff_x,
+                linewidth=1.6,
+                color=colors.get(kernel, "k"),
+                label=labels.get(kernel, str(kernel)) if i == 0 else None,
+                linestyle=linestyle[i]
             )
+            x_curves[kernel].append((k_hat_x, abs(re_keff_x - k_hat_x), i))
 
+
+            # plots the resolving power for the mesh-free operators for the Laplacian
             ax_lap_re.plot(
-                k_hat_l, k_hat_l ** 2,
-                linestyle="--", linewidth=1.2, color="black",
-                label="Spectral",
+                lap_x, re_lap_eff,
+                linewidth=1.6,
+                color=colors.get(kernel, "k"),
+                label=labels.get(kernel, str(kernel)) if i == 0 else None,
+                linestyle=linestyle[i]
+            )
+            lap_curves[kernel].append((k_hat_l, abs(re_lap_eff - k_hat_l), i))
+
+            ax_x_im.plot(
+                k_hat_x, im_keff_x,
+                linewidth=1.6,
+                color=colors.get(kernel, "k"),
+                label=labels.get(kernel, str(kernel)) if i == 0 else None,
+                linestyle=linestyle[i]
+            )
+            x_curves_im[kernel].append((k_hat_x, im_keff_x, i))
+
+            ax_lap_im.plot(
+                lap_x, im_lap_eff,
+                linewidth=1.6,
+                color=colors.get(kernel, "k"),
+                label=labels.get(kernel, str(kernel)) if i == 0 else None,
+                linestyle=linestyle[i]
+            )
+            lap_curves_im[kernel].append((lap_x, im_lap_eff, i))
+
+        ax_x_re.set_xlabel(r"$\hat{k}$", fontsize=9)
+        ax_x_re.set_ylabel(r"$\Re\{\hat{k}_{\mathrm{eff}}\}$", fontsize=9)
+        ax_x_re.tick_params(labelsize=8)
+        ax_x_re.spines["top"].set_visible(False)
+        ax_x_re.spines["right"].set_visible(False)
+        ax_x_re.grid(True, linewidth=0.35, alpha=0.2, color='gray')
+
+        ax_lap_re.set_xlabel(r"$\hat{q}$", fontsize=9)
+        ax_lap_re.set_ylabel(r"$\Re\{\hat{q}_{\mathrm{eff}}^2\}$", fontsize=9)
+        ax_lap_re.tick_params(labelsize=8)
+        ax_lap_re.spines["top"].set_visible(False)
+        ax_lap_re.spines["right"].set_visible(False)
+        ax_lap_re.grid(True, linewidth=0.35, alpha=0.2, color='gray')
+
+        ax_x_im.set_xlabel(r"$\hat{k}$", fontsize=9)
+        ax_x_im.set_ylabel(r"$\Im\{\hat{k}_{\mathrm{eff}}\}$", fontsize=9)
+        ax_x_im.tick_params(labelsize=8)
+        ax_x_im.spines["top"].set_visible(False)
+        ax_x_im.spines["right"].set_visible(False)
+        ax_x_im.grid(True, linewidth=0.35, alpha=0.2, color='gray')
+
+        ax_lap_im.set_xlabel(r"$\hat{q}$", fontsize=9)
+        ax_lap_im.set_ylabel(r"$\Im\{\hat{q}_{\mathrm{eff}}^2\}$", fontsize=9)
+        ax_lap_im.tick_params(labelsize=8)
+        ax_lap_im.spines["top"].set_visible(False)
+        ax_lap_im.spines["right"].set_visible(False)
+        ax_lap_im.grid(True, linewidth=0.35, alpha=0.2, color='gray')
+
+
+        if use_inset_lap and len(lap_curves) > 0 and (k_hat_ref is not None):
+            axins = inset_axes(
+                ax_lap_re,
+                bbox_to_anchor=(0.15, 0.16, 1, 1),
+                bbox_transform=ax_lap_re.transAxes,
+                width=inset_size[0],
+                height=inset_size[1],
+                loc=inset_loc,
+                borderpad=0.8,
             )
 
-        # plots the resolving power for the mesh-free operators for the derivative
-        ax_x_re.plot(
-            k_hat_x, re_keff_x,
-            linewidth=1.6,
-            color=colors.get(kernel, "k"),
-            label=labels.get(kernel, str(kernel)),
-        )
-        x_curves[kernel] = (k_hat_x, abs(re_keff_x - k_hat_x))
-
-        # plots the resolving power for the mesh-free operators for the Laplacian
-        ax_lap_re.plot(
-            lap_x, re_lap_eff,
-            linewidth=1.6,
-            color=colors.get(kernel, "k"),
-            label=labels.get(kernel, str(kernel)),
-        )
-        lap_curves[kernel] = (k_hat_l, abs(re_lap_eff - k_hat_l))
-
-        ax_x_im.plot(
-            k_hat_x, im_keff_x,
-            linewidth=1.6,
-            color=colors.get(kernel, "k"),
-            label=labels.get(kernel, str(kernel)),
-        )
-        x_curves_im[kernel] = (k_hat_x, im_keff_x)
-
-        ax_lap_im.plot(
-            lap_x, im_lap_eff,
-            linewidth=1.6,
-            color=colors.get(kernel, "k"),
-            label=labels.get(kernel, str(kernel)),
-        )
-        lap_curves_im[kernel] = (lap_x, im_lap_eff)
+            for kernel, list_of_lines in lap_curves.items():
+                for (x_l, y_l, style_idx) in list_of_lines:
+                    axins.plot(
+                        x_l, y_l,
+                        linewidth=1.2,
+                        color=colors.get(kernel, "k"),
+                        linestyle=linestyle[style_idx]
+                    )
 
 
-    ax_x_re.set_xlabel(r"$\hat{k}$", fontsize=9)
-    ax_x_re.set_ylabel(r"$\Re\{\hat{k}_{\mathrm{eff}}\}$", fontsize=9)
-    ax_x_re.tick_params(labelsize=8)
-    ax_x_re.spines["top"].set_visible(False)
-    ax_x_re.spines["right"].set_visible(False)
-    ax_x_re.grid(True, linewidth=0.35, alpha=0.2, color='gray')
+            axins.set_xlim(*inset_xlim_lap)
+            axins.set_ylim(*inset_ylim_lap)
 
-    ax_lap_re.set_xlabel(r"$\hat{q}$", fontsize=9)
-    ax_lap_re.set_ylabel(r"$\Re\{\hat{q}_{\mathrm{eff}}^2\}$", fontsize=9)
-    ax_lap_re.tick_params(labelsize=8)
-    ax_lap_re.spines["top"].set_visible(False)
-    ax_lap_re.spines["right"].set_visible(False)
-    ax_lap_re.grid(True, linewidth=0.35, alpha=0.2, color='gray')
+            axins.set_ylabel(r"$|\Re\{\hat{q}^2_{eff}\} - \hat{q}^2|$", fontsize=8)
+            axins.set_yscale("log")
+            #axins.set_xscale("log")
 
-    ax_x_im.set_xlabel(r"$\hat{k}$", fontsize=9)
-    ax_x_im.set_ylabel(r"$\Im\{\hat{k}_{\mathrm{eff}}\}$", fontsize=9)
-    ax_x_im.tick_params(labelsize=8)
-    ax_x_im.spines["top"].set_visible(False)
-    ax_x_im.spines["right"].set_visible(False)
-    ax_x_im.grid(True, linewidth=0.35, alpha=0.2, color='gray')
+            axins.xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+            axins.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
+            axins.xaxis.get_offset_text().set_fontsize(7)
 
-    ax_lap_im.set_xlabel(r"$\hat{q}$", fontsize=9)
-    ax_lap_im.set_ylabel(r"$\Im\{\hat{q}_{\mathrm{eff}}^2\}$", fontsize=9)
-    ax_lap_im.tick_params(labelsize=8)
-    ax_lap_im.spines["top"].set_visible(False)
-    ax_lap_im.spines["right"].set_visible(False)
-    ax_lap_im.grid(True, linewidth=0.35, alpha=0.2, color='gray')
-
-    if zoom_y and len(lap_curves) > 0:
-        x_threshold = 0.8
-
-        high_x_vals = []
-        all_vals = []
-
-        for (x_l, y_l) in lap_curves.values():
-            all_vals.append(y_l[y_l > 0.0])
-
-            mask = (x_l >= x_threshold) & (y_l > 0.0)
-            if np.any(mask):
-                high_x_vals.append(y_l[mask])
-
-        all_vals = np.concatenate(all_vals)
-        high_x_vals = np.concatenate(high_x_vals)
-
-        ymin = np.min(high_x_vals)
-        ymax = np.max(all_vals)
-
-        #ax_lap_re.set_yscale("log")
-        #ax_lap_re.set_ylim(ymin, zoom_pad * ymax)
-
-    if use_inset_lap and len(lap_curves) > 0 and (k_hat_ref is not None):
-        axins = inset_axes(
-            ax_lap_re,
-            bbox_to_anchor=(0.15, 0.0, 1, 1),  # (x, y, width, height) - adjust the 0.1
-            bbox_transform=ax_lap_re.transAxes,
-            width=inset_size[0],
-            height=inset_size[1],
-            loc=inset_loc,
-            borderpad=0.8,
-        )
-
-        for kernel, (x_l, y_l) in lap_curves.items():
-            axins.plot(x_l, y_l, linewidth=1.2, color=colors.get(kernel, "k"))
-
-        #axins.plot(k_hat_ref, k_hat_ref**2, linestyle="--", linewidth=1.0, color="black")
-
-        axins.set_xlim(*inset_xlim_lap)
-        axins.set_ylim(*inset_ylim_lap)
-
-        axins.set_ylabel(r"$|\Re\{\hat{q}^2_{eff}\} - \hat{q}^2|$", fontsize=8)
-        axins.set_yscale("log")
-        #axins.set_xscale("log")
-
-        axins.xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
-        axins.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
-        axins.xaxis.get_offset_text().set_fontsize(7)
-
-        axins.tick_params(labelsize=7)
-        axins.grid(True, linewidth=0.25, alpha=0.2, color='gray')
+            axins.tick_params(labelsize=7)
+            axins.grid(True, linewidth=0.25, alpha=0.2, color='gray')
 
 
-        axins_lap_im = inset_axes(
-            ax_lap_im,
-            bbox_to_anchor=(0, 0.0, 1, 1),  # (x, y, width, height) - adjust the 0.1
-            bbox_transform=ax_lap_im.transAxes,
-            width=inset_size[0],
-            height=inset_size[1],
-            loc='upper left',
-            borderpad=1.6,
-        )
+            axins_lap_im = inset_axes(
+                ax_lap_im,
+                bbox_to_anchor=(0.05, 0.25, 1, 1),
+                bbox_transform=ax_lap_im.transAxes,
+                width=inset_size[0],
+                height=inset_size[1],
+                loc='upper left',
+                borderpad=1.6,
+            )
 
 
-        for kernel, (x_l, y_l) in lap_curves_im.items():
-            axins_lap_im.plot(x_l, y_l, linewidth=1.2, color=colors.get(kernel, "k"))
+            for kernel, list_of_lines in lap_curves_im.items():
+                for (x_l, y_l, style_idx) in list_of_lines:
+                    axins_lap_im.plot(
+                        x_l, y_l,
+                        linewidth=1.2,
+                        color=colors.get(kernel, "k"),
+                        linestyle=linestyle[style_idx]
+                    )
 
-        inset_lap_im_x_axis = (0, 0.3)
-        inset_lap_im_y_axis = (0, 0.003)
+            inset_lap_im_x_axis = (0, 0.3)
+            inset_lap_im_y_axis = (0, 0.01)
 
-        axins_lap_im.set_xlim(*inset_lap_im_x_axis)
-        axins_lap_im.set_ylim(*inset_lap_im_y_axis)
+            axins_lap_im.set_xlim(*inset_lap_im_x_axis)
+            axins_lap_im.set_ylim(*inset_lap_im_y_axis)
 
-        axins_lap_im.yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
-        axins_lap_im.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
-        axins_lap_im.yaxis.get_offset_text().set_fontsize(7)
+            axins_lap_im.yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+            axins_lap_im.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+            axins_lap_im.yaxis.get_offset_text().set_fontsize(7)
 
-        axins_lap_im.tick_params(labelsize=7)
-        axins_lap_im.grid(True, linewidth=0.25, alpha=0.2, color='gray')
-
-
-
-        #mark_inset(ax_lap_re, axins, loc1=2, loc2=4, fc="none", ec="0.4", linewidth=0.6)
-
-    if use_inset_x and len(x_curves) > 0 and (k_hat_ref is not None):
-        axins_x = inset_axes(
-            ax_x_re,
-            bbox_to_anchor=(0.15, 0.0, 1, 1),  # (x, y, width, height) - adjust the 0.1
-            bbox_transform=ax_x_re.transAxes,
-            width=inset_size_x[0],
-            height=inset_size_x[1],
-            loc=inset_loc_x,
-            borderpad=0.8,
-        )
-        #axins_x.set_yscale("log")
-
-        for kernel, (xx, yy) in x_curves.items():
-            axins_x.plot(xx, yy, linewidth=1.2, color=colors.get(kernel, "k"))
-
-        # Reference in inset
-        #axins_x.plot(k_hat_ref, k_hat_ref, linestyle="--", linewidth=1.0, color="black")
-
-        axins_x.set_xlim(*inset_xlim_x)
-        axins_x.set_ylim(*inset_ylim_x)
-
-        axins_x.set_ylabel(r"$|\Re\{\hat{k}_{eff}\} - \hat{k}|$", fontsize=8)
-        axins_x.set_yscale("log")
-        #axins_x.set_xscale("log")
-
-        axins_x.tick_params(labelsize=7)
-        axins_x.grid(True, linewidth=0.25, alpha=0.2, color='gray')
-
-        axins_x_im = inset_axes(
-            ax_x_im,
-            bbox_to_anchor=(0, 0, 1, 1),  # (x, y, width, height) - adjust the 0.1
-            bbox_transform=ax_x_im.transAxes,
-            width=inset_size[0],
-            height=inset_size[1],
-            loc='upper left',
-            borderpad=1.6,
-        )
+            axins_lap_im.tick_params(labelsize=7)
+            axins_lap_im.grid(True, linewidth=0.25, alpha=0.2, color='gray')
 
 
-        for kernel, (x_l, y_l) in x_curves_im.items():
-            axins_x_im.plot(x_l, y_l, linewidth=1.2, color=colors.get(kernel, "k"))
+        if use_inset_x and len(x_curves) > 0 and (k_hat_ref is not None):
+            axins_x = inset_axes(
+                ax_x_re,
+                bbox_to_anchor=(0.15, 0.15, 1, 1),  # (x, y, width, height) - adjust the 0.1
+                bbox_transform=ax_x_re.transAxes,
+                width=inset_size_x[0],
+                height=inset_size_x[1],
+                loc=inset_loc_x,
+                borderpad=0.8,
+            )
 
-        inset_lap_im_x_axis = (0, 0.3)
-        inset_lap_im_y_axis = (0, 0.003)
 
-        axins_x_im.set_xlim(*inset_lap_im_x_axis)
-        axins_x_im.set_ylim(*inset_lap_im_y_axis)
+            for kernel, list_of_lines in x_curves.items():
+                for (x_l, y_l, style_idx) in list_of_lines:
+                    axins_x.plot(
+                        x_l, y_l,
+                        linewidth=1.2,
+                        color=colors.get(kernel, "k"),
+                        linestyle=linestyle[style_idx]
+                    )
 
-        axins_x_im.yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
-        axins_x_im.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
-        axins_x_im.yaxis.get_offset_text().set_fontsize(7)
+            axins_x.set_xlim(*inset_xlim_x)
+            axins_x.set_ylim(*inset_ylim_x)
 
-        axins_x_im.tick_params(labelsize=7)
-        axins_x_im.grid(True, linewidth=0.25, alpha=0.2, color='gray')
+            axins_x.set_ylabel(r"$|\Re\{\hat{k}_{eff}\} - \hat{k}|$", fontsize=8)
+            axins_x.set_yscale("log")
+            #axins_x.set_xscale("log")
 
-        #mark_inset(ax_x_re, axins_x, loc1=2, loc2=4, fc="none", ec="0.4", linewidth=0.6)
+            axins_x.tick_params(labelsize=7)
+            axins_x.grid(True, linewidth=0.25, alpha=0.2, color='gray')
 
-    if show_legend:
-        legend_args = {'fontsize': 7.5, 'frameon': False, 'bbox_to_anchor': (1, 1), 'loc': 'upper left'}
+            axins_x_im = inset_axes(
+                ax_x_im,
+                bbox_to_anchor=(0.05, 0.25, 1, 1),  # (x, y, width, height) - adjust the 0.1
+                bbox_transform=ax_x_im.transAxes,
+                width=inset_size[0],
+                height=inset_size[1],
+                loc='upper left',
+                borderpad=1.6,
+            )
 
-        #ax_x_re.legend(**legend_args)
-        #ax_lap_re.legend(**legend_args)
-        ax_x_im.legend(**legend_args)
-        ax_lap_im.legend(**legend_args)
+            for kernel, list_of_lines in x_curves_im.items():
+                for (x_l, y_l, style_idx) in list_of_lines:
+                    axins_x_im.plot(
+                        x_l, y_l,
+                        linewidth=1.2,
+                        color=colors.get(kernel, "k"),
+                        linestyle=linestyle[style_idx]  # Use the stored index
+                    )
 
-    fig_x_re.tight_layout()
-    fig_lap_re.tight_layout()
-    fig_x_im.tight_layout()
-    fig_lap_im.tight_layout()
+            inset_lap_im_x_axis = (0, 0.3)
+            inset_lap_im_y_axis = (0, 0.01)
+
+            axins_x_im.set_xlim(*inset_lap_im_x_axis)
+            axins_x_im.set_ylim(*inset_lap_im_y_axis)
+
+            axins_x_im.yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+            axins_x_im.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+            axins_x_im.yaxis.get_offset_text().set_fontsize(7)
+
+            axins_x_im.tick_params(labelsize=7)
+            axins_x_im.grid(True, linewidth=0.25, alpha=0.2, color='gray')
+
+            #mark_inset(ax_x_re, axins_x, loc1=2, loc2=4, fc="none", ec="0.4", linewidth=0.6)
+
+        if show_legend:
+            legend_args = {'fontsize': 8.5, 'frameon': False, 'bbox_to_anchor': (1, 0.75), 'loc': 'upper left'}
+
+            #ax_x_re.legend(**legend_args)
+            #ax_lap_re.legend(**legend_args)
+            ax_x_im.legend(**legend_args)
+            ax_lap_im.legend(**legend_args)
+
+    #fig_x_re.tight_layout()
+    #fig_lap_re.tight_layout()
+    #fig_x_im.tight_layout()
+    #fig_lap_im.tight_layout()
 
     if save:
         fig_x_re.savefig(f"{filename_prefix}_real_dx.pdf", bbox_inches="tight")
@@ -586,10 +591,7 @@ def plot_convergence(
     }
 
     # --- Figure size (ICML)
-    if column == "single":
-        figsize = (3.25, 2.4)
-    else:
-        figsize = (6.75, 2.6)
+    figsize = (4.2, 2.6) if column == "single" else (6.75, 2.8)
 
     fig, ax = plt.subplots(figsize=figsize)
 
@@ -624,7 +626,7 @@ def plot_convergence(
 
     ax.set_xscale("log")
     ax.set_yscale("log")
-    ax.set_xlabel(r"$s/H$", fontsize=9)
+    ax.set_xlabel(r"$s$", fontsize=9)
     ax.set_ylabel(r"$L_2$ norm", fontsize=9)
     ax.tick_params(labelsize=8)
 
@@ -647,14 +649,8 @@ def plot_convergence(
     ax.grid(True, which="minor", linestyle=":", linewidth=0.3, alpha=0.8)
 
     if show_legend:
-        ax.legend(
-            fontsize=7.5,
-            frameon=False,
-            ncol=1,
-            loc="best",
-            handlelength=1.8,
-            borderaxespad=0.2,
-        )
+        args = {'fontsize': 8.5, 'frameon': False, 'bbox_to_anchor': (1, 0.75), 'loc': 'upper left'}
+        ax.legend(**args)
 
 
     fig.tight_layout()
@@ -664,4 +660,3 @@ def plot_convergence(
         plt.close(fig)
     else:
         plt.show()
-

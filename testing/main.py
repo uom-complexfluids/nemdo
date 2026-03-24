@@ -2,9 +2,9 @@ from classes.simulation import run
 from functions.plot import plot_convergence, plot_resolving_p, plot_stability_multi
 import pickle as pk
 
-plot_ls = [True,
+plot_ls = [False,
            True,
-           True]
+           False]
 
 bool_plot_stability   = plot_ls[0]
 bool_plot_convergence = plot_ls[1]
@@ -37,8 +37,4 @@ if bool_plot_convergence:
 
 
 if bool_plot_resolving_p:
-    plot_resolving_p(results,
-                          use_inset=True,
-                          zoom_y=True,
-                          save=True,
-                          use_inset_x=True)
+    plot_resolving_p(results, save=True, use_inset_lap=True, use_inset_x=True, show_legend=True)
