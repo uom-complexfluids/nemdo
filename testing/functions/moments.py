@@ -20,11 +20,14 @@ def calc_moments(neigh_xy, w_x, w_l, h, polynomial=2):
     moments_x = np.array(moments_x)
     moments_l = np.array(moments_l)
 
-    target_x = np.array([1, 0, 0, 0, 0])
-    target_l = np.array([0, 0, 1, 0, 1])
+    n = int((polynomial ** 2 + 3 * polynomial) / 2)
+    cd = np.zeros((n, 1))
 
-    error_x = moments_x - target_x
-    error_l = moments_l - target_l
+    target_x = cd.copy(); target_x[0] = 1
+    target_l = cd.copy(); target_l[[2,4], :] = 1
+
+    error_x = moments_x - target_x.T
+    error_l = moments_l - target_l.T
 
     # Define a formatter for 4 significant figures in scientific notation
     sci_fmt = lambda x: f"{x:.2e}"
