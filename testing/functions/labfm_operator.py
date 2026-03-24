@@ -175,11 +175,11 @@ def calc_weights(coordinates, polynomial, h, total_nodes):
     neigh_xy_dist = {}
 
 
-    for ref_x, ref_y in tqdm(coordinates, desc="Calculating LABFM_Weights for " + str(total_nodes) + ", " + str(polynomial), ncols=100):
+    for ref_x, ref_y in tqdm(coordinates, desc="Calculating LABFM Weights for " + str(total_nodes) + ", " + str(polynomial), ncols=100):
         if ref_x > 0.5 or ref_x < -0.5 or ref_y > 0.5 or ref_y < -0.5: continue
 
         ref_node            = (ref_x, ref_y)
-        neigh_r_d, neigh_xy_d, neigh_coor_dict[ref_node] = neighbour_nodes_kdtree(coordinates, ref_node, 2*h, tree, max_neighbors=10)
+        neigh_r_d, neigh_xy_d, neigh_coor_dict[ref_node] = neighbour_nodes_kdtree(coordinates, ref_node, 2*h, tree, max_neighbors=100)
         neigh_xy_dist[ref_node] = neigh_xy_d
         monomial            = calc_monomial(neigh_xy_d, monomial_exponent) * scaling_vector
         basis_func          = calc_abf(neigh_r_d, neigh_xy_d, monomial_exponent, h)
