@@ -6,7 +6,7 @@ from torch_geometric.loader.ibmb_loader import topk_ppr_matrix
 from tqdm import tqdm
 
 
-def resolving_power_real(w_x: dict,
+def resolving_power(w_x: dict,
                      w_l: dict,
                     s: float,
                     neigh_dist_xy: dict,
